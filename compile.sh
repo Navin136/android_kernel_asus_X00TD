@@ -1,4 +1,12 @@
 #!bin/bash
+sudo apt install make bison bc libncurses5-dev git tmate python3-pip curl build-essential zip unzip
+pip install telegram-upload
+if [ -d $HOME/Anykernel ]
+then
+	echo "Anykernel Directory Already Exists"
+else
+git clone --depth=1 https://github.com/nktn30/AnyKernel3 $HOME/Anykernel
+fi
 if [ -d $HOME/kernel ]
 then
 echo "kernel dir exists"
@@ -35,7 +43,7 @@ make O=out X00TD_defconfig
 make -j$(nproc --all) O=out \
       CLANG_TRIPLE=aarch64-linux-gnu- \
       CROSS_COMPILE=aarch64-linux-android- \
-      CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+      CROSS_COMPILE_ARM32=arm-linux-androideabi- \
       CC=clang
 if [ -f out/arch/arm64/boot/Image.gz-dtb ]
 then
@@ -46,7 +54,7 @@ cp $HOME/Anykernel/VELOCITY_V1.0-"$DATE".zip $HOME/
 rm $HOME/Anykernel/Image.gz-dtb
 rm $HOME/Anykernel/VELOCITY_V1.0-"$DATE".zip
 #Upload Kernel
-curl --upload-file $HOME/VELOCITY_V1.0-"$DATE".zip https://transfer.sh/VELOCITY_V1.0-"$DATE".zip
+telegram-upload $HOME/VELOCITY_V1.0-"$DATE".zip
 else
 	echo "Build Errored!"
 fi
