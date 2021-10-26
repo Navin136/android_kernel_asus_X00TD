@@ -130,45 +130,33 @@ KERVER=$(make kernelversion)
 
 
 # Set a commit head
-COMMIT_HEAD=$(git log --oneline -1)
+COMMIT_HEAD=$(git log --oneline -n 1)
 
 # Set Date 
 DATE=$(TZ=GMT-8 date +"%Y%m%d-%H%M")
 
 #Now Its time for other stuffs like cloning, exporting, etc
 
- clone() {
+clone() {
 	echo ""
 	if [ $COMPILER = "clang" ]
 	then
 		msg "|| Cloning toolchain ||"
-		if [ -d ~/toolchains/clang ]
+		if [ -d ~/toolchains/clang ] && [ -d ~/toolchains/gcc32 ] && [ -d ~/toolchains/gcc64 ] && [ ~/toolchains/AnyKernel3 ]
 		then
-			cp -r ~/toolchains/clang $KERNEL_DIR/clang
+			TC_DIR=~/toolchains/clang
+			GCC64_DIR=~/toolchains/gcc64
+			GCC32_DIR=~/toolchains/gcc32
+			ln -sf ~/toolchains/AnyKernel3 $KERNEL_DIR/AnyKernel3
 		else
 			wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android12-release/clang-r416183b1.tar.gz -O $KERNEL_DIR/clang.tar.gz;mkdir clang;mv clang.tar.gz clang/;cd clang;tar -xvzf clang.tar.gz;cd ..
-		fi
-                if [ -d ~/toolchains/gcc32 ]
-                then
-                        cp -r ~/toolchains/gcc32 $KERNEL_DIR/gcc32
-                else
                 	git clone --depth=1 https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9 -b android12-release gcc64
-                fi
-                if [ -d ~/toolchains/gcc64 ]
-                then
-                        cp -r ~/toolchains/gcc64 $KERNEL_DIR/gcc64
-                else
                 	git clone --depth=1 https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9 -b android12-release gcc32
-                fi
-                if [ -d ~/toolchains/AnyKernel3 ]
-                then
-                        cp -r ~/toolchains/AnyKernel3 $KERNEL_DIR/AnyKernel3
-                else
                 	git clone --depth 1 --no-single-branch https://github.com/"$AUTHOR"/AnyKernel3.git -b master
-                fi
-		TC_DIR=$KERNEL_DIR/clang
-		GCC64_DIR=$KERNEL_DIR/gcc64
-		GCC32_DIR=$KERNEL_DIR/gcc32
+			TC_DIR=$KERNEL_DIR/clang
+			GCC64_DIR=$KERNEL_DIR/gcc64
+			GCC32_DIR=$KERNEL_DIR/gcc32
+	fi
 	fi
 }
 
@@ -196,7 +184,7 @@ exports() {
 ##---------------------------------------------------------##
 
 tg_post_msg() {
-	curl -s -X POST "$BOT_MSG_URL" -d chat_id="$CHATID" \
+	curl -X POST "$BOT_MSG_URL" -d chat_id="$CHATID" \
 	-d "disable_web_page_preview=true" \
 	-d "parse_mode=html" \
 	-d text="$1"
@@ -228,7 +216,7 @@ build_kernel() {
 
 	if [ "$PTTG" = 1 ]
  	then
-		tg_post_msg "<b>Hey Navin ! </b><b>$KBUILD_BUILD_VERSION CI Build Triggered</b>%0A<b>Docker OS: </b><code>$DISTRO</code>%0A<b>Kernel Version : </b><code>$KERVER</code>%0A<b>Date : </b><code>$(TZ=GMT-8 date)</code>%0A<b>Device : </b><code>$MODEL [$DEVICE]</code>%0A<b>Pipeline Host : </b><code>$KBUILD_BUILD_HOST</code>%0A<b>Host Core Count : </b><code>$PROCS</code>%0A<b>Compiler Used : </b><code>$KBUILD_COMPILER_STRING</code>%0A<b>Branch : </b><code>$CI_BRANCH</code>%0A<b>Top Commit : </b><code>$COMMIT_HEAD</code>%0A<a href='$SERVER_URL'>Link</a>%0A<b>Build Coming! Stay Online bruh</b>"
+		tg_post_msg "<b>Hey Navin !</b>%0A<b>$KBUILD_BUILD_VERSION CI Build Triggered</b>%0A<b>Docker OS: </b><code>$DISTRO</code>%0A<b>Kernel Version : </b><code>$KERVER</code>%0A<b>Date : </b><code>$(TZ=GMT-8 date)</code>%0A<b>Device : </b><code>$MODEL [$DEVICE]</code>%0A<b>Pipeline Host : </b><code>$KBUILD_BUILD_HOST</code>%0A<b>Host Core Count : </b><code>$PROCS</code>%0A<b>Compiler Used : </b><code>$KBUILD_COMPILER_STRING</code>%0A<b>Branch : </b><code>$CI_BRANCH</code>%0A<b>Top Commit : </b><code>$COMMIT_HEAD</code>%0A<b>Build Coming! Stay Online bruh</b>"
 	fi
 
 	make O=out $DEFCONFIG
@@ -242,7 +230,7 @@ build_kernel() {
 	fi
 
 	BUILD_START=$(date +"%s")
-	
+
 	if [ $COMPILER = "clang" ]
 	then
 		MAKE+=(
@@ -299,9 +287,15 @@ gen_zip() {
 	cd ..
 }
 
+nuke() {
+        msg "|| Nuking AnyKernel ||"
+        rm -rf AnyKernel3
+}
+
 clone
 exports
 build_kernel
+nuke
 
 if [ $LOG_DEBUG = "1" ]
 then
